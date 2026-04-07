@@ -96,6 +96,7 @@ export function Prompt(props: PromptProps) {
   const list = createMemo(() => props.placeholders?.normal ?? [])
   const shell = createMemo(() => props.placeholders?.shell ?? [])
   const [auto, setAuto] = createSignal<AutocompleteRef>()
+  const [autoaccept, setAutoaccept] = kv.signal<"none" | "edit">("permission_auto_accept", "edit")
   const activeOrgName = createMemo(() => sync.data.console_state.activeOrgName)
   const canSwitchOrgs = createMemo(() => sync.data.console_state.switchableOrgCount > 1)
   const currentProviderLabel = createMemo(() => {
@@ -219,6 +220,17 @@ export function Prompt(props: PromptProps) {
 
   command.register(() => {
     return [
+      {
+        title: autoaccept() === "none" ? "Enable autoedit" : "Disable autoedit",
+        value: "permission.auto_accept.toggle",
+        search: "toggle permissions",
+        keybind: "permission_auto_accept_toggle",
+        category: "Agent",
+        onSelect: (dialog) => {
+          setAutoaccept(() => (autoaccept() === "none" ? "edit" : "none"))
+          dialog.clear()
+        },
+      },
       {
         title: "Clear prompt",
         value: "prompt.clear",
@@ -1117,22 +1129,29 @@ export function Prompt(props: PromptProps) {
                   </box>
                 </Show>
               </box>
-              <Show when={hasRightContent()}>
-                <box flexDirection="row" gap={1} alignItems="center">
-                  {props.right}
-                  <Show when={activeOrgName()}>
-                    <text
-                      fg={theme.textMuted}
-                      onMouseUp={() => {
-                        if (!canSwitchOrgs()) return
-                        command.trigger("console.org.switch")
-                      }}
-                    >
-                      {`${CONSOLE_MANAGED_ICON} ${activeOrgName()}`}
-                    </text>
-                  </Show>
-                </box>
-              </Show>
+              <box flexDirection="row" gap={1} alignItems="center">
+                <Show when={hasRightContent()}>
+                  <box flexDirection="row" gap={1} alignItems="center">
+                    {props.right}
+                    <Show when={activeOrgName()}>
+                      <text
+                        fg={theme.textMuted}
+                        onMouseUp={() => {
+                          if (!canSwitchOrgs()) return
+                          command.trigger("console.org.switch")
+                        }}
+                      >
+                        {`${CONSOLE_MANAGED_ICON} ${activeOrgName()}`}
+                      </text>
+                    </Show>
+                  </box>
+                </Show>
+                <Show when={autoaccept() === "edit"}>
+                  <text>
+                    <span style={{ fg: theme.warning }}>autoedit</span>
+                  </text>
+                </Show>
+              </box>
             </box>
           </box>
         </box>
